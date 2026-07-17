@@ -48,7 +48,7 @@ jobs:
 
       - name: Run streak check
         env:
-          GITHUB_USERNAME: ${{ vars.GH_USERNAME }}
+          GH_USERNAME: ${{ vars.GH_USERNAME }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           CHECK_STAGE: ${{ steps.stage.outputs.stage }}

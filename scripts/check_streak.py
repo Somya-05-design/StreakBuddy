@@ -16,12 +16,28 @@ from datetime import datetime, timezone, timedelta
 
 import requests
 
-GH_USERNAME = os.environ["GH_USERNAME"]
-GH_TOKEN = os.environ["GH_TOKEN"]
-NTFY_TOPIC = os.environ["NTFY_TOPIC"]
-
-# Which check is this run? soft | urgent | final  (passed in by the workflow)
+GH_USERNAME = os.environ.get("GH_USERNAME", "")
+GH_TOKEN = os.environ.get("GH_TOKEN", "")
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 CHECK_STAGE = os.environ.get("CHECK_STAGE", "soft")
+
+print(f"DEBUG: GH_USERNAME='{GH_USERNAME}' (len={len(GH_USERNAME)})")
+print(f"DEBUG: GH_TOKEN set: {bool(GH_TOKEN)}")
+print(f"DEBUG: NTFY_TOPIC='{NTFY_TOPIC}' (len={len(NTFY_TOPIC)})")
+print(f"DEBUG: CHECK_STAGE='{CHECK_STAGE}'")
+
+if not GH_USERNAME:
+    print("FATAL: GH_USERNAME is empty. Check the 'GH_USERNAME' repository "
+          "variable under Settings -> Secrets and variables -> Actions -> Variables tab.")
+    sys.exit(1)
+if not GH_TOKEN:
+    print("FATAL: GH_TOKEN is empty. This should come from the built-in "
+          "secrets.GITHUB_TOKEN mapped in the workflow file.")
+    sys.exit(1)
+if not NTFY_TOPIC:
+    print("FATAL: NTFY_TOPIC is empty. Check the 'NTFY_TOPIC' repository secret "
+          "under Settings -> Secrets and variables -> Actions -> Secrets tab.")
+    sys.exit(1)
 
 GRAPHQL_QUERY = """
 query($login: String!) {
@@ -84,11 +100,6 @@ def fetch_contribution_days():
 
 
 def compute_current_streak(days_by_date, today_str):
-    """
-    Walk backwards from yesterday (UTC) counting consecutive days
-    with contributionCount > 0. Today is intentionally excluded since
-    we only reach this point when today has 0 contributions so far.
-    """
     streak = 0
     cursor = datetime.strptime(today_str, "%Y-%m-%d").date() - timedelta(days=1)
     while True:
