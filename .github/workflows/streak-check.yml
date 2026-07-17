@@ -1,4 +1,4 @@
-name: GitHub Streak Guard
+name: GitHub StreakBuddy
 
 on:
   schedule:
