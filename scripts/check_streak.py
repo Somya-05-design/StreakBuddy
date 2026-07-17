@@ -16,9 +16,17 @@ from datetime import datetime, timezone, timedelta
 
 import requests
 
+<<<<<<< HEAD
 GH_USERNAME = os.environ.get("GH_USERNAME", "")
 GH_TOKEN = os.environ.get("GH_TOKEN", "")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
+=======
+GITHUB_USERNAME = os.environ["GH_USERNAME"]
+GITHUB_TOKEN = os.environ["GH_TOKEN"]
+NTFY_TOPIC = os.environ["NTFY_TOPIC"]
+
+# Which check is this run? soft | urgent | final  (passed in by the workflow)
+>>>>>>> b8f02a0121bb599e7629756982daed7bcb13cc30
 CHECK_STAGE = os.environ.get("CHECK_STAGE", "soft")
 
 print(f"DEBUG: GH_USERNAME='{GH_USERNAME}' (len={len(GH_USERNAME)})")
