@@ -1,0 +1,55 @@
+name: GitHub Streak Guard
+
+on:
+  schedule:
+    # 6:00 PM IST -> 12:30 UTC  (soft nudge)
+    - cron: '30 12 * * *'
+    # 10:30 PM IST -> 17:00 UTC (urgent)
+    - cron: '0 17 * * *'
+    # 1:30 AM IST (next day) -> 20:00 UTC same day (final warning)
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Which stage to simulate (soft, urgent, final)'
+        required: false
+        default: 'soft'
+
+jobs:
+  check-streak:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Determine stage from trigger time
+        id: stage
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "stage=${{ github.event.inputs.stage }}" >> "$GITHUB_OUTPUT"
+          else
+            HOUR=$(date -u +%H)
+            if [ "$HOUR" = "12" ]; then
+              echo "stage=soft" >> "$GITHUB_OUTPUT"
+            elif [ "$HOUR" = "17" ]; then
+              echo "stage=urgent" >> "$GITHUB_OUTPUT"
+            else
+              echo "stage=final" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Run streak check
+        env:
+          GITHUB_USERNAME: ${{ vars.GITHUB_USERNAME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          CHECK_STAGE: ${{ steps.stage.outputs.stage }}
+        run: python scripts/check_streak.py
