@@ -16,9 +16,24 @@ from datetime import datetime, timezone, timedelta
 
 import requests
 
-GITHUB_USERNAME = os.environ["GITHUB_USERNAME"]
-GH_TOKEN = os.environ["GH_TOKEN"]
-NTFY_TOPIC = os.environ["NTFY_TOPIC"]
+GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "")
+GH_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
+
+print(f"DEBUG: GITHUB_USERNAME='{GITHUB_USERNAME}' (len={len(GITHUB_USERNAME)})")
+print(f"DEBUG: GH_TOKEN set: {bool(GH_TOKEN)}")
+print(f"DEBUG: NTFY_TOPIC set: {bool(NTFY_TOPIC)}")
+
+if not GITHUB_USERNAME:
+    print("FATAL: GITHUB_USERNAME is empty. Check the 'GH_USERNAME' repository "
+          "variable in Settings -> Secrets and variables -> Actions -> Variables tab.")
+    sys.exit(1)
+if not GH_TOKEN:
+    print("FATAL: GH_TOKEN/GITHUB_TOKEN is empty.")
+    sys.exit(1)
+if not NTFY_TOPIC:
+    print("FATAL: NTFY_TOPIC is empty. Check the 'NTFY_TOPIC' repository secret.")
+    sys.exit(1)
 
 # Which check is this run? soft | urgent | final  (passed in by the workflow)
 CHECK_STAGE = os.environ.get("CHECK_STAGE", "soft")
