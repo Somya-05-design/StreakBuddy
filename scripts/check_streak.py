@@ -144,7 +144,13 @@ def main():
     today_count = days_by_date.get(today_str, 0)
 
     if today_count > 0:
-        print(f"[{CHECK_STAGE}] Already committed today ({today_count} contributions). Staying quiet.")
+        title = "✅ Good job — already committed today"
+        message = (
+            f"You've made {today_count} contribution(s) today. "
+            f"Streak is safe for now. Keep it up!"
+        )
+        send_ntfy(title, message, priority="low", tags="white_check_mark")
+        print(f"[{CHECK_STAGE}] Already committed today ({today_count} contributions). Sent congrats notification.")
         return
 
     streak = compute_current_streak(days_by_date, today_str)

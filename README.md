@@ -10,7 +10,9 @@ running on your machine.
 
 - 3 times a day, a GitHub Actions workflow checks whether today's UTC
   contribution day already has a commit/contribution.
-- If it does, the run exits silently — no notification spam.
+- If it does, you get a low-priority "good job" congrats push — since
+  the script has no memory between runs, this fires at every remaining
+  scheduled check that day (up to 3x), not just once.
 - If it doesn't, it sends you a push notification via [ntfy.sh](https://ntfy.sh),
   with wording that gets more urgent the later in the day it is.
 - The day boundary is 00:00 UTC = 5:30 AM IST — this matches how GitHub
