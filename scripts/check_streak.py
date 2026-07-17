@@ -16,8 +16,8 @@ from datetime import datetime, timezone, timedelta
 
 import requests
 
-GH_USERNAME = os.environ["GH_USERNAME"]
-GH_TOKEN = os.environ["GH_TOKEN"]
+GITHUB_USERNAME = os.environ["GH_USERNAME"]
+GITHUB_TOKEN = os.environ["GH_TOKEN"]
 NTFY_TOPIC = os.environ["NTFY_TOPIC"]
 
 # Which check is this run? soft | urgent | final  (passed in by the workflow)
