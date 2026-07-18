@@ -125,7 +125,7 @@ def send_ntfy(title, message, priority, tags):
         f"https://ntfy.sh/{NTFY_TOPIC}",
         data=message.encode("utf-8"),
         headers={
-            "Title": title,
+            "Title": title.encode("utf-8"),
             "Priority": priority,
             "Tags": tags,
         },
