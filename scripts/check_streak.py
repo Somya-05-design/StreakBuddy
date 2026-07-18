@@ -3,8 +3,8 @@
 GitHub Streak Guard
 --------------------
 Checks whether today's (UTC) GitHub contribution graph day already has
-a commit/contribution. If not, sends a push notification via ntfy.sh
-reminding you before the streak resets at 00:00 UTC (5:30 AM IST).
+a commit/contribution, and sends a Zomato-style playful push via
+ntfy.sh at each of 4 checkpoints through the day.
 
 Fully stateless: streak length is recomputed fresh from the last 365
 days of contribution data on every run. Nothing is stored anywhere.
@@ -12,31 +12,30 @@ days of contribution data on every run. Nothing is stored anywhere.
 
 import os
 import sys
+import random
 from datetime import datetime, timezone, timedelta
 
 import requests
 
-GH_USERNAME = os.environ.get("GH_USERNAME", "")
+GITHUB_USERNAME = os.environ.get("GH_USERNAME", "")
 GH_TOKEN = os.environ.get("GH_TOKEN", "")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
-CHECK_STAGE = os.environ.get("CHECK_STAGE", "soft")
+CHECK_STAGE = os.environ.get("CHECK_STAGE", "stage1")
 
-print(f"DEBUG: GH_USERNAME='{GH_USERNAME}' (len={len(GH_USERNAME)})")
+print(f"DEBUG: GH_USERNAME='{GITHUB_USERNAME}' (len={len(GITHUB_USERNAME)})")
 print(f"DEBUG: GH_TOKEN set: {bool(GH_TOKEN)}")
-print(f"DEBUG: NTFY_TOPIC='{NTFY_TOPIC}' (len={len(NTFY_TOPIC)})")
+print(f"DEBUG: NTFY_TOPIC='{'*' * len(NTFY_TOPIC)}' (len={len(NTFY_TOPIC)})")
 print(f"DEBUG: CHECK_STAGE='{CHECK_STAGE}'")
 
-if not GH_USERNAME:
+if not GITHUB_USERNAME:
     print("FATAL: GH_USERNAME is empty. Check the 'GH_USERNAME' repository "
-          "variable under Settings -> Secrets and variables -> Actions -> Variables tab.")
+          "variable in Settings -> Secrets and variables -> Actions -> Variables tab.")
     sys.exit(1)
 if not GH_TOKEN:
-    print("FATAL: GH_TOKEN is empty. This should come from the built-in "
-          "secrets.GITHUB_TOKEN mapped in the workflow file.")
+    print("FATAL: GH_TOKEN is empty.")
     sys.exit(1)
 if not NTFY_TOPIC:
-    print("FATAL: NTFY_TOPIC is empty. Check the 'NTFY_TOPIC' repository secret "
-          "under Settings -> Secrets and variables -> Actions -> Secrets tab.")
+    print("FATAL: NTFY_TOPIC is empty. Check the 'NTFY_TOPIC' repository secret.")
     sys.exit(1)
 
 GRAPHQL_QUERY = """
@@ -56,22 +55,106 @@ query($login: String!) {
 }
 """
 
-STAGE_CONFIG = {
-    "soft": {
-        "title_no_streak": "👋 No commit yet today",
-        "title_streak": "👋 {streak}-day streak — no commit yet",
+# ---------------------------------------------------------------------------
+# Message bank — Zomato-style playful, encouraging, a little cheeky.
+# Each stage has its own personality: casual -> nudgy -> concerned -> urgent.
+# Multiple options per slot so it doesn't feel like the same robot every day.
+# ---------------------------------------------------------------------------
+
+MESSAGES = {
+    "stage1": {  # 2 PM IST - start of day energy
+        "committed": {
+            "titles": [
+                "😎 Already {count}x today?!",
+                "🐦 Look at this early bird",
+            ],
+            "bodies": [
+                "You've committed {count} time(s) before lunch even settled. {streak}-day streak locked in. Show-off. 🏆",
+                "{count} commit(s) down already. The repo is fed, watered, and happy. 🌱",
+            ],
+        },
+        "not_committed": {
+            "titles": [
+                "☀️ Rise and grind, dev",
+                "👀 GitHub's looking a bit empty",
+            ],
+            "bodies": [
+                "It's 2 PM and your repo's emptier than a Monday standup. Kick off the day with one commit!",
+                "Your {streak}-day streak is watching you from the couch, waiting. Give it something to do. 💻",
+            ],
+        },
         "priority": "default",
-        "tags": "eyes",
+        "tags": "sunny",
     },
-    "urgent": {
-        "title_no_streak": "⏰ Still no commit today",
-        "title_streak": "⏰ {streak}-day streak at risk",
+    "stage2": {  # 5 PM IST - afternoon check-in
+        "committed": {
+            "titles": [
+                "💪 Still going strong",
+                "🚂 Streak train, chugging along",
+            ],
+            "bodies": [
+                "{count} commit(s) and counting. Keep this train rolling — next stop, tomorrow. 🚂",
+                "5 PM and you're already sorted for today. Casual flex. 😌 {streak}-day streak intact.",
+            ],
+        },
+        "not_committed": {
+            "titles": [
+                "🫤 5 PM and... nothing?",
+                "⏳ The repo is getting impatient",
+            ],
+            "bodies": [
+                "Even your coffee break had more action than your GitHub today. Time to commit something!",
+                "Your {streak}-day streak just refreshed the page for the 5th time, hoping. Don't ghost it.",
+            ],
+        },
+        "priority": "default",
+        "tags": "coffee",
+    },
+    "stage3": {  # 8 PM IST - evening, getting real
+        "committed": {
+            "titles": [
+                "🎉 Today's basically a wrap",
+                "✅ Streak: safely tucked in",
+            ],
+            "bodies": [
+                "{count} commit(s) in the bag. {streak}-day streak sleeping peacefully tonight. 😴",
+                "You showed up today. That's the whole game. See you tomorrow, champ. 🏅",
+            ],
+        },
+        "not_committed": {
+            "titles": [
+                "😰 Tick tock, it's 8 PM",
+                "🚧 Streak under construction (still)",
+            ],
+            "bodies": [
+                "Your {streak}-day streak is starting to sweat. A one-line commit still counts — don't let today be the day.",
+                "The day's winding down and GitHub's still quiet. Even a typo fix keeps the streak alive. 😅",
+            ],
+        },
         "priority": "high",
         "tags": "warning",
     },
-    "final": {
-        "title_no_streak": "🚨 Last chance — commit now",
-        "title_streak": "🚨 {streak}-day streak dies in ~{hours}h",
+    "stage4": {  # 10 PM IST - last real nudge before the late-night grace window
+        "committed": {
+            "titles": [
+                "🏆 Day secured. Go rest.",
+                "🌙 All good here, night owl",
+            ],
+            "bodies": [
+                "{count} commit(s) done, {streak}-day streak safe. Close the laptop, you've earned it. 🌙",
+                "Nothing left to do here except sleep well. Streak's not going anywhere tonight.",
+            ],
+        },
+        "not_committed": {
+            "titles": [
+                "🚨 Last real call tonight",
+                "⚠️ Streak on thin ice",
+            ],
+            "bodies": [
+                "It's 10 PM and still nothing. You've technically got till 5:30 AM, but don't push your luck. One commit, that's it.",
+                "Your {streak}-day streak is one commit away from staying alive. Don't let it flatline over something small.",
+            ],
+        },
         "priority": "urgent",
         "tags": "rotating_light",
     },
@@ -81,7 +164,7 @@ STAGE_CONFIG = {
 def fetch_contribution_days():
     resp = requests.post(
         "https://api.github.com/graphql",
-        json={"query": GRAPHQL_QUERY, "variables": {"login": GH_USERNAME}},
+        json={"query": GRAPHQL_QUERY, "variables": {"login": GITHUB_USERNAME}},
         headers={"Authorization": f"bearer {GH_TOKEN}"},
         timeout=30,
     )
@@ -99,7 +182,8 @@ def fetch_contribution_days():
     return days
 
 
-def compute_current_streak(days_by_date, today_str):
+def compute_streak_before_today(days_by_date, today_str):
+    """Walk backwards from yesterday counting consecutive contributed days."""
     streak = 0
     cursor = datetime.strptime(today_str, "%Y-%m-%d").date() - timedelta(days=1)
     while True:
@@ -110,14 +194,6 @@ def compute_current_streak(days_by_date, today_str):
         else:
             break
     return streak
-
-
-def hours_until_utc_midnight(now_utc):
-    tomorrow = (now_utc + timedelta(days=1)).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    delta = tomorrow - now_utc
-    return round(delta.total_seconds() / 3600, 1)
 
 
 def send_ntfy(title, message, priority, tags):
@@ -140,39 +216,24 @@ def main():
 
     days = fetch_contribution_days()
     days_by_date = {d["date"]: d["contributionCount"] for d in days}
-
     today_count = days_by_date.get(today_str, 0)
 
-    if today_count > 0:
-        title = "✅ Good job — already committed today"
-        message = (
-            f"You've made {today_count} contribution(s) today. "
-            f"Streak is safe for now. Keep it up!"
-        )
-        send_ntfy(title, message, priority="low", tags="white_check_mark")
-        print(f"[{CHECK_STAGE}] Already committed today ({today_count} contributions). Sent congrats notification.")
-        return
+    streak_before_today = compute_streak_before_today(days_by_date, today_str)
 
-    streak = compute_current_streak(days_by_date, today_str)
-    hours_left = hours_until_utc_midnight(now_utc)
+    stage_cfg = MESSAGES.get(CHECK_STAGE, MESSAGES["stage1"])
+    branch = "committed" if today_count > 0 else "not_committed"
+    slot = stage_cfg[branch]
 
-    cfg = STAGE_CONFIG.get(CHECK_STAGE, STAGE_CONFIG["soft"])
+    title_template = random.choice(slot["titles"])
+    body_template = random.choice(slot["bodies"])
 
-    if streak > 0:
-        title = cfg["title_streak"].format(streak=streak, hours=hours_left)
-        message = (
-            f"No commits yet today. Your {streak}-day streak resets at "
-            f"00:00 UTC (5:30 AM IST) — about {hours_left}h left. Push something!"
-        )
-    else:
-        title = cfg["title_no_streak"]
-        message = (
-            f"No commits yet today, and no active streak. "
-            f"~{hours_left}h left before the day (UTC) closes out. Start one!"
-        )
+    effective_streak = streak_before_today + 1 if today_count > 0 else streak_before_today
 
-    send_ntfy(title, message, cfg["priority"], cfg["tags"])
-    print(f"[{CHECK_STAGE}] Notification sent: {title}")
+    title = title_template.format(count=today_count, streak=effective_streak)
+    message = body_template.format(count=today_count, streak=effective_streak)
+
+    send_ntfy(title, message, stage_cfg["priority"], stage_cfg["tags"])
+    print(f"[{CHECK_STAGE}/{branch}] Notification sent: {title}")
 
 
 if __name__ == "__main__":

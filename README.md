@@ -8,13 +8,13 @@ running on your machine.
 
 ## How it works
 
-- 3 times a day, a GitHub Actions workflow checks whether today's UTC
+- 4 times a day, a GitHub Actions workflow checks whether today's UTC
   contribution day already has a commit/contribution.
-- If it does, you get a low-priority "good job" congrats push — since
-  the script has no memory between runs, this fires at every remaining
-  scheduled check that day (up to 3x), not just once.
-- If it doesn't, it sends you a push notification via [ntfy.sh](https://ntfy.sh),
-  with wording that gets more urgent the later in the day it is.
+- Either way — committed or not — you get a push notification. The
+  wording is playful and Zomato-style (encouraging when you've
+  committed, cheeky-but-motivating when you haven't), and gets more
+  urgent as the day goes on. Messages are randomly picked from a small
+  bank per stage, so it doesn't feel like the same robot every day.
 - The day boundary is 00:00 UTC = 5:30 AM IST — this matches how GitHub
   actually calculates your contribution graph, not local midnight.
 - Nothing is stored anywhere. Streak length is recalculated fresh from
@@ -24,9 +24,10 @@ Schedule (converted to UTC for the workflow file):
 
 | Stage  | IST time | UTC time  | Tone |
 |--------|----------|-----------|------|
-| soft   | 6:00 PM  | 12:30 UTC | gentle nudge |
-| urgent | 10:30 PM | 17:00 UTC | more direct |
-| final  | 1:30 AM  | 20:00 UTC | last chance, shows hours left |
+| stage1 | 2:00 PM  | 08:30 UTC | casual, start-of-day |
+| stage2 | 5:00 PM  | 11:30 UTC | friendly check-in |
+| stage3 | 8:00 PM  | 14:30 UTC | a little concerned |
+| stage4 | 10:00 PM | 16:30 UTC | last real call before the late-night grace window |
 
 ## Setup (5-10 minutes)
 
@@ -76,7 +77,7 @@ script.
 
 ### 5. Test it immediately
 Go to the **Actions** tab → **GitHub Streak Guard** workflow → **Run workflow**
-button → pick a stage (`soft`/`urgent`/`final`) → Run.
+button → pick a stage (`stage1`/`stage2`/`stage3`/`stage4`) → Run.
 
 The very first lines of the log will show:
 ```

@@ -2,18 +2,20 @@ name: GitHub Streak Guard
 
 on:
   schedule:
-    # 6:00 PM IST -> 12:30 UTC  (soft nudge)
-    - cron: '30 12 * * *'
-    # 10:30 PM IST -> 17:00 UTC (urgent)
-    - cron: '0 17 * * *'
-    # 1:30 AM IST (next day) -> 20:00 UTC same day (final warning)
-    - cron: '0 20 * * *'
+    # 2:00 PM IST -> 08:30 UTC (stage1 - morning)
+    - cron: '30 8 * * *'
+    # 5:00 PM IST -> 11:30 UTC (stage2 - afternoon)
+    - cron: '30 11 * * *'
+    # 8:00 PM IST -> 14:30 UTC (stage3 - evening)
+    - cron: '30 14 * * *'
+    # 10:00 PM IST -> 16:30 UTC (stage4 - night)
+    - cron: '30 16 * * *'
   workflow_dispatch:
     inputs:
       stage:
-        description: 'Which stage to simulate (soft, urgent, final)'
+        description: 'Which stage to simulate (stage1, stage2, stage3, stage4)'
         required: false
-        default: 'soft'
+        default: 'stage1'
 
 jobs:
   check-streak:
@@ -37,12 +39,14 @@ jobs:
             echo "stage=${{ github.event.inputs.stage }}" >> "$GITHUB_OUTPUT"
           else
             HOUR=$(date -u +%H)
-            if [ "$HOUR" = "12" ]; then
-              echo "stage=soft" >> "$GITHUB_OUTPUT"
-            elif [ "$HOUR" = "17" ]; then
-              echo "stage=urgent" >> "$GITHUB_OUTPUT"
+            if [ "$HOUR" = "08" ]; then
+              echo "stage=stage1" >> "$GITHUB_OUTPUT"
+            elif [ "$HOUR" = "11" ]; then
+              echo "stage=stage2" >> "$GITHUB_OUTPUT"
+            elif [ "$HOUR" = "14" ]; then
+              echo "stage=stage3" >> "$GITHUB_OUTPUT"
             else
-              echo "stage=final" >> "$GITHUB_OUTPUT"
+              echo "stage=stage4" >> "$GITHUB_OUTPUT"
             fi
           fi
 
